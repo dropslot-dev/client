@@ -1,363 +1,211 @@
 #include <Arduino.h>
+#include <WiFi.h>
+#include "config.h"
+#include "led_controller.h"
+#include "button_handler.h"
+#include "api_client.h"
 
-#define RED_PIN     25
-#define GREEN_PIN   26
-#define BLUE_PIN    27
-#define BUTTON_PIN  4
+LEDController ledController;
+ButtonHandler buttonHandler;
+APIClient* apiClient = nullptr;
 
-#define RED_CHANNEL   0
-#define GREEN_CHANNEL 1
-#define BLUE_CHANNEL  2
-#define PWM_FREQ      5000
-#define PWM_RESOLUTION 8
+unsigned long lastPollTime = 0;
+RoomStatus currentStatus = STATUS_ERROR;
+String currentMeetingId = "";
 
-enum Color {
-  RED,
-  GREEN,
-  BLUE,
-  YELLOW,
-  MAGENTA,
-  CYAN,
-  WHITE,
-  RED_GREEN_FLASH,
-  RED_BLUE_FLASH,
-  GREEN_BLUE_FLASH,
-  YELLOW_BLUE_FLASH,
-  MAGENTA_CYAN_FLASH,
-  RED_CYAN_FLASH
-};
+TaskHandle_t ledTaskHandle = NULL;
+TaskHandle_t buttonTaskHandle = NULL;
 
-enum Mode {
-  SOLID,
-  FLASH,
-  PULSE
-};
+void handleButtonPress();
 
-Color currentColor = RED;
-Mode currentMode = SOLID;
-unsigned long lastButtonPress = 0;
-const unsigned long DEBOUNCE_DELAY = 200;
-bool buttonPressed = false;
-
-void setColorPWM(int r, int g, int b) {
-  ledcWrite(RED_CHANNEL, r);
-  ledcWrite(GREEN_CHANNEL, g);
-  ledcWrite(BLUE_CHANNEL, b);
+void ledTask(void* parameter) {
+    for(;;) {
+        ledController.update();
+        vTaskDelay(1000 / LED_FPS / portTICK_PERIOD_MS);
+    }
 }
 
-void setColor(int r, int g, int b) {
-  setColorPWM(r ? 0 : 255, g ? 0 : 255, b ? 0 : 255);
+void buttonTask(void* parameter) {
+    for(;;) {
+        handleButtonPress();
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
 }
 
-void setColorByEnum(Color color) {
-  switch(color) {
-    case RED:
-      setColor(1, 0, 0);
-      break;
-    case GREEN:
-      setColor(0, 1, 0);
-      break;
-    case BLUE:
-      setColor(0, 0, 1);
-      break;
-    case YELLOW:
-      setColorPWM(0, 255-140, 255); // Orange RGB(255, 140, 0)
-      break;
-    case MAGENTA:
-      setColor(1, 0, 1);
-      break;
-    case CYAN:
-      setColor(0, 1, 1);
-      break;
-    case WHITE:
-      setColor(1, 1, 1);
-      break;
-    case RED_GREEN_FLASH:
-      setColor(1, 1, 0);
-      break;
-    case RED_BLUE_FLASH:
-      setColor(1, 0, 1);
-      break;
-    case GREEN_BLUE_FLASH:
-      setColor(0, 1, 1);
-      break;
-    case YELLOW_BLUE_FLASH:
-      setColor(1, 1, 1);
-      break;
-    case MAGENTA_CYAN_FLASH:
-      setColor(1, 1, 1);
-      break;
-    case RED_CYAN_FLASH:
-      setColor(1, 1, 1);
-      break;
-    default:
-      break;
-  }
-}
-
-void turnOff() {
-  setColorPWM(255, 255, 255);
-}
-
-String getColorName(Color color) {
-  switch(color) {
-    case RED: return "RED";
-    case GREEN: return "GREEN";
-    case BLUE: return "BLUE";
-    case YELLOW: return "YELLOW";
-    case MAGENTA: return "MAGENTA";
-    case CYAN: return "CYAN";
-    case WHITE: return "WHITE";
-    case RED_GREEN_FLASH: return "RED/GREEN FLASH";
-    case RED_BLUE_FLASH: return "RED/BLUE FLASH";
-    case GREEN_BLUE_FLASH: return "GREEN/BLUE FLASH";
-    case YELLOW_BLUE_FLASH: return "YELLOW/BLUE FLASH";
-    case MAGENTA_CYAN_FLASH: return "MAGENTA/CYAN FLASH";
-    case RED_CYAN_FLASH: return "RED/CYAN FLASH";
-    default: return "UNKNOWN";
-  }
-}
-
-String getModeName(Mode mode) {
-  switch(mode) {
-    case SOLID: return "SOLID";
-    case FLASH: return "FLASH";
-    case PULSE: return "PULSE";
-    default: return "UNKNOWN";
-  }
+void connectToWiFi() {
+    Serial.println("Connecting to WiFi...");
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    
+    ledController.setPattern(LED_WIFI_DISCONNECTED);
+    
+    while (WiFi.status() != WL_CONNECTED) {
+        ledController.update();
+        delay(50);
+        Serial.print(".");
+    }
+    
+    Serial.println("\nWiFi connected!");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
 }
 
 void setup() {
-  Serial.begin(115200);
-  delay(1000);
-  
-  ledcSetup(RED_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
-  ledcSetup(GREEN_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
-  ledcSetup(BLUE_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
-  
-  ledcAttachPin(RED_PIN, RED_CHANNEL);
-  ledcAttachPin(GREEN_PIN, GREEN_CHANNEL);
-  ledcAttachPin(BLUE_PIN, BLUE_CHANNEL);
-  
-  pinMode(BUTTON_PIN, INPUT_PULLUP);
-  
-  turnOff();
-  
-  Serial.println("\n=== RGB LED Test Program ===");
-  Serial.println("Press button to cycle: Solid -> Flash -> Pulse -> Next Color");
-  Serial.println("13 colors total\n");
-  
-  Serial.println("Starting with: RED SOLID");
+    Serial.begin(115200);
+    delay(1000);
+    
+    Serial.println("\n=== Dropslot Room Controller ===");
+    Serial.print("Room ID: ");
+    Serial.println(ROOM_ID);
+    
+    ledController.begin();
+    buttonHandler.begin();
+    
+    connectToWiFi();
+    
+    apiClient = new APIClient(SERVER_URL, ROOM_ID, AUTH_ENABLED);
+    
+    xTaskCreatePinnedToCore(
+        ledTask,
+        "LED Task",
+        2048,
+        NULL,
+        1,
+        &ledTaskHandle,
+        0
+    );
+    
+    xTaskCreatePinnedToCore(
+        buttonTask,
+        "Button Task",
+        4096,
+        NULL,
+        2,
+        &buttonTaskHandle,
+        1
+    );
+    
+    Serial.println("System ready!");
+}
+
+void handleButtonPress() {
+    if (!buttonHandler.wasPressed()) {
+        return;
+    }
+    
+    Serial.println("=== Button pressed! ===");
+    Serial.print("Current status: ");
+    Serial.println(currentStatus);
+    
+    switch (currentStatus) {
+        case STATUS_FREE:
+            Serial.println("Quick-booking room for 30 minutes...");
+            if (apiClient->quickBook(30)) {
+                Serial.println("Quick-book successful!");
+            } else {
+                Serial.println("Quick-book failed!");
+            }
+            break;
+            
+        case STATUS_AWAITING_CONFIRMATION:
+            Serial.println("Confirming meeting...");
+            if (apiClient->confirmMeeting(currentMeetingId)) {
+                Serial.println("Meeting confirmed!");
+            } else {
+                Serial.println("Confirmation failed!");
+            }
+            break;
+            
+        case STATUS_IN_PROGRESS:
+            Serial.println("Ending meeting...");
+            if (apiClient->endMeeting(currentMeetingId)) {
+                Serial.println("Meeting ended!");
+            } else {
+                Serial.println("End meeting failed!");
+            }
+            break;
+            
+        default:
+            Serial.println("Button press ignored in current state");
+            break;
+    }
+    
+    lastPollTime = 0;
+}
+
+void pollRoomStatus() {
+    if (WiFi.status() != WL_CONNECTED) {
+        return;
+    }
+    
+    unsigned long now = millis();
+    
+    if (now - lastPollTime < POLL_INTERVAL_MS) {
+        return;
+    }
+    
+    lastPollTime = now;
+    
+    RoomStatusData statusData;
+    
+    if (!apiClient->getRoomStatus(statusData)) {
+        Serial.println("Failed to get room status");
+        Serial.print("Error: ");
+        Serial.println(statusData.error);
+        if (currentStatus != STATUS_ERROR) {
+            ledController.setPattern(LED_ERROR_RED_BLUE);
+            currentStatus = STATUS_ERROR;
+        }
+        return;
+    }
+    
+    if (statusData.status != currentStatus) {
+        currentStatus = statusData.status;
+        currentMeetingId = statusData.currentMeetingId;
+        
+        switch (currentStatus) {
+            case STATUS_FREE:
+                Serial.println("Status: FREE");
+                ledController.setPattern(LED_SOLID_GREEN);
+                break;
+                
+            case STATUS_UPCOMING:
+                Serial.println("Status: UPCOMING");
+                Serial.print("Next meeting starts at: ");
+                Serial.println(statusData.nextMeetingStart);
+                ledController.setPattern(LED_PULSING_BLUE);
+                break;
+                
+            case STATUS_AWAITING_CONFIRMATION:
+                Serial.println("Status: AWAITING CONFIRMATION");
+                Serial.print("Current meeting ends at: ");
+                Serial.println(statusData.currentMeetingEnd);
+                ledController.setPattern(LED_FLASHING_RED);
+                break;
+                
+            case STATUS_IN_PROGRESS:
+                Serial.println("Status: IN PROGRESS");
+                Serial.print("Current meeting ends at: ");
+                Serial.println(statusData.currentMeetingEnd);
+                ledController.setPattern(LED_SLOW_PULSE_RED);
+                break;
+                
+            case STATUS_ERROR:
+                Serial.println("Status: ERROR");
+                Serial.print("Error: ");
+                Serial.println(statusData.error);
+                ledController.setPattern(LED_ERROR_RED_BLUE);
+                break;
+        }
+    }
 }
 
 void loop() {
-  unsigned long currentTime = millis();
-  
-  if (digitalRead(BUTTON_PIN) == LOW) {
-    if (!buttonPressed && (currentTime - lastButtonPress > DEBOUNCE_DELAY)) {
-      buttonPressed = true;
-      lastButtonPress = currentTime;
-      
-      if (currentMode == SOLID) {
-        currentMode = FLASH;
-      } else if (currentMode == FLASH) {
-        currentMode = PULSE;
-      } else {
-        currentMode = SOLID;
-        currentColor = (Color)((currentColor + 1) % 13);
-      }
-      
-      if (currentColor >= RED_GREEN_FLASH && currentMode == FLASH) {
-        currentMode = PULSE;
-      }
-      
-      Serial.println("\nButton pressed! " + getColorName(currentColor) + " " + getModeName(currentMode));
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("WiFi disconnected! Reconnecting...");
+        ledController.setPattern(LED_WIFI_DISCONNECTED);
+        connectToWiFi();
     }
-  } else {
-    buttonPressed = false;
-  }
-  
-  if (currentMode == SOLID) {
-    if (currentColor >= RED_GREEN_FLASH) {
-      unsigned long alternateTime = currentTime % 250;
-      if (alternateTime < 125) {
-        switch(currentColor) {
-          case RED_GREEN_FLASH:
-            setColor(1, 0, 0);
-            break;
-          case RED_BLUE_FLASH:
-            setColor(1, 0, 0);
-            break;
-          case GREEN_BLUE_FLASH:
-            setColor(0, 1, 0);
-            break;
-          case YELLOW_BLUE_FLASH:
-            setColor(1, 1, 0);
-            break;
-          case MAGENTA_CYAN_FLASH:
-            setColor(1, 0, 1);
-            break;
-          case RED_CYAN_FLASH:
-            setColor(1, 0, 0);
-            break;
-        }
-      } else {
-        switch(currentColor) {
-          case RED_GREEN_FLASH:
-            setColor(0, 1, 0);
-            break;
-          case RED_BLUE_FLASH:
-            setColor(0, 0, 1);
-            break;
-          case GREEN_BLUE_FLASH:
-            setColor(0, 0, 1);
-            break;
-          case YELLOW_BLUE_FLASH:
-            setColor(0, 0, 1);
-            break;
-          case MAGENTA_CYAN_FLASH:
-            setColor(0, 1, 1);
-            break;
-          case RED_CYAN_FLASH:
-            setColor(0, 1, 1);
-            break;
-        }
-      }
-    } else {
-      setColorByEnum(currentColor);
-    }
-  } else if (currentMode == FLASH) {
-    if (currentColor >= RED_GREEN_FLASH) {
-      unsigned long alternateTime = currentTime % 250;
-      if (alternateTime < 125) {
-        switch(currentColor) {
-          case RED_GREEN_FLASH:
-            setColor(1, 0, 0);
-            break;
-          case RED_BLUE_FLASH:
-            setColor(1, 0, 0);
-            break;
-          case GREEN_BLUE_FLASH:
-            setColor(0, 1, 0);
-            break;
-          case YELLOW_BLUE_FLASH:
-            setColor(1, 1, 0);
-            break;
-          case MAGENTA_CYAN_FLASH:
-            setColor(1, 0, 1);
-            break;
-          case RED_CYAN_FLASH:
-            setColor(1, 0, 0);
-            break;
-        }
-      } else {
-        switch(currentColor) {
-          case RED_GREEN_FLASH:
-            setColor(0, 1, 0);
-            break;
-          case RED_BLUE_FLASH:
-            setColor(0, 0, 1);
-            break;
-          case GREEN_BLUE_FLASH:
-            setColor(0, 0, 1);
-            break;
-          case YELLOW_BLUE_FLASH:
-            setColor(0, 0, 1);
-            break;
-          case MAGENTA_CYAN_FLASH:
-            setColor(0, 1, 1);
-            break;
-          case RED_CYAN_FLASH:
-            setColor(0, 1, 1);
-            break;
-        }
-      }
-    } else {
-      unsigned long flashTime = currentTime % 1000;
-      if (flashTime < 500) {
-        setColorByEnum(currentColor);
-      } else {
-        turnOff();
-      }
-    }
-  } else {
-    if (currentColor >= RED_GREEN_FLASH) {
-      float pulsePhase = (currentTime % 2000) / 2000.0;
-      int brightness = (sin(pulsePhase * 2 * PI) + 1) * 127.5;
-      int pwmValue = 255 - brightness;
-      
-      unsigned long alternateTime = currentTime % 500;
-      if (alternateTime < 250) {
-        switch(currentColor) {
-          case RED_GREEN_FLASH:
-            setColorPWM(pwmValue, 255, 255);
-            break;
-          case RED_BLUE_FLASH:
-            setColorPWM(pwmValue, 255, 255);
-            break;
-          case GREEN_BLUE_FLASH:
-            setColorPWM(255, pwmValue, 255);
-            break;
-          case YELLOW_BLUE_FLASH:
-            setColorPWM(pwmValue, pwmValue, 255);
-            break;
-          case MAGENTA_CYAN_FLASH:
-            setColorPWM(pwmValue, 255, pwmValue);
-            break;
-          case RED_CYAN_FLASH:
-            setColorPWM(pwmValue, 255, 255);
-            break;
-        }
-      } else {
-        switch(currentColor) {
-          case RED_GREEN_FLASH:
-            setColorPWM(255, pwmValue, 255);
-            break;
-          case RED_BLUE_FLASH:
-            setColorPWM(255, 255, pwmValue);
-            break;
-          case GREEN_BLUE_FLASH:
-            setColorPWM(255, 255, pwmValue);
-            break;
-          case YELLOW_BLUE_FLASH:
-            setColorPWM(255, 255, pwmValue);
-            break;
-          case MAGENTA_CYAN_FLASH:
-            setColorPWM(255, pwmValue, pwmValue);
-            break;
-          case RED_CYAN_FLASH:
-            setColorPWM(255, pwmValue, pwmValue);
-            break;
-        }
-      }
-    } else {
-      float pulsePhase = (currentTime % 2000) / 2000.0;
-      int brightness = (sin(pulsePhase * 2 * PI) + 1) * 127.5;
-      int pwmValue = 255 - brightness;
-      
-      switch(currentColor) {
-        case RED:
-          setColorPWM(pwmValue, 255, 255);
-          break;
-        case GREEN:
-          setColorPWM(255, pwmValue, 255);
-          break;
-        case BLUE:
-          setColorPWM(255, 255, pwmValue);
-          break;
-        case YELLOW:
-          setColorPWM(pwmValue, pwmValue, 255);
-          break;
-        case MAGENTA:
-          setColorPWM(pwmValue, 255, pwmValue);
-          break;
-        case CYAN:
-          setColorPWM(255, pwmValue, pwmValue);
-          break;
-        case WHITE:
-          setColorPWM(pwmValue, pwmValue, pwmValue);
-          break;
-      }
-    }
-  }
+    
+    pollRoomStatus();
+    delay(1000);
 }

@@ -92,40 +92,33 @@ void handleButtonPress() {
         return;
     }
     
-    Serial.println("=== Button pressed! ===");
-    Serial.print("Current status: ");
-    Serial.println(currentStatus);
-    
     switch (currentStatus) {
         case STATUS_FREE:
-            Serial.println("Quick-booking room for 30 minutes...");
-            if (apiClient->quickBook(30)) {
-                Serial.println("Quick-book successful!");
+        if (apiClient->quickBook()) {
+                Serial.println("[Button] Quick-book - OK");
             } else {
-                Serial.println("Quick-book failed!");
+                Serial.println("[Button] Quick-book - FAIL");
             }
             break;
             
         case STATUS_AWAITING_CONFIRMATION:
-            Serial.println("Confirming meeting...");
-            if (apiClient->confirmMeeting(currentMeetingId)) {
-                Serial.println("Meeting confirmed!");
+        if (apiClient->confirmMeeting(currentMeetingId)) {
+                Serial.println("[Button] Confirm - OK");
             } else {
-                Serial.println("Confirmation failed!");
+                Serial.println("[Button] Confirm - FAIL");
             }
             break;
             
         case STATUS_IN_PROGRESS:
-            Serial.println("Ending meeting...");
-            if (apiClient->endMeeting(currentMeetingId)) {
-                Serial.println("Meeting ended!");
+        if (apiClient->endMeeting(currentMeetingId)) {
+                Serial.println("[Button] End meeting - OK");
             } else {
-                Serial.println("End meeting failed!");
+                Serial.println("[Button] End meeting - FAIL");
             }
             break;
             
         default:
-            Serial.println("Button press ignored in current state");
+            Serial.println("[Button] Ignored");
             break;
     }
     

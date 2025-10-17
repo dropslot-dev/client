@@ -15,8 +15,6 @@ bool ButtonHandler::wasPressed() {
     
     if (currentState != _lastState) {
         _lastDebounceTime = now;
-        Serial.print("[Button] State change: ");
-        Serial.println(currentState == LOW ? "PRESSED" : "RELEASED");
     }
     
     _lastState = currentState;
@@ -27,7 +25,6 @@ bool ButtonHandler::wasPressed() {
         if (currentState == LOW && !_buttonPressed) {
             pressed = true;
             _buttonPressed = true;
-            Serial.println("[Button] Button press detected!");
         } else if (currentState == HIGH) {
             _buttonPressed = false;
         }

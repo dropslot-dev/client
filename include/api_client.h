@@ -26,7 +26,7 @@ public:
     APIClient(const String& serverUrl, const String& roomId, bool authEnabled);
     
     bool getRoomStatus(RoomStatusData& data);
-    bool quickBook(int durationMinutes);
+    bool quickBook();
     bool confirmMeeting(const String& meetingId);
     bool endMeeting(const String& meetingId);
 

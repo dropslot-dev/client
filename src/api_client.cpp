@@ -12,11 +12,6 @@ APIClient::APIClient(const String& serverUrl, const String& roomId, bool authEna
 bool APIClient::makeRequest(const String& method, const String& endpoint, const String& payload, DynamicJsonDocument& response) {
     String url = _serverUrl + endpoint;
 
-    Serial.println("[API] Making " + method + " request to: " + url);
-    
-    if (_authEnabled && !_authToken.isEmpty()) {
-        Serial.println("[API] Authorization enabled, token: " + _authToken);
-    }
     
     _http.begin(url);
     _http.setTimeout(HTTP_TIMEOUT_MS);
@@ -27,27 +22,34 @@ bool APIClient::makeRequest(const String& method, const String& endpoint, const 
     
     int httpCode = -1;
     
+    unsigned long startTime = millis();
     if (method == "GET") {
         httpCode = _http.GET();
     } else if (method == "POST") {
         _http.addHeader("Content-Type", "application/json");
         httpCode = _http.POST(payload);
-    } else if (method == "DELETE") {
-        httpCode = _http.sendRequest("DELETE");
     }
+    
+    unsigned long responseTime = millis() - startTime;
     
     bool success = false;
     
     if (httpCode > 0) {
         String responsePayload = _http.getString();
-        Serial.println("[API] Response: " + responsePayload);
         
         if (httpCode >= 200 && httpCode < 300) {
             DeserializationError error = deserializeJson(response, responsePayload);
             if (!error) {
                 success = true;
+                Serial.println("[API] " + method + " " + endpoint + " - " + String(responseTime) + "ms");
+            } else {
+                Serial.println("[API] " + method + " " + endpoint + " - Parse error");
             }
+        } else {
+            Serial.println("[API] " + method + " " + endpoint + " - HTTP " + String(httpCode) + " (" + String(responseTime) + "ms)");
         }
+    } else {
+        Serial.println("[API] " + method + " " + endpoint + " - Request failed");
     }
     
     _http.end();
@@ -65,7 +67,6 @@ bool APIClient::getRoomStatus(RoomStatusData& data) {
     }
     
     String stateStr = doc["state"].as<String>();
-    Serial.println("[API] Parsed state: " + stateStr);
     
     if (stateStr == "free") {
         data.status = STATUS_FREE;
@@ -77,16 +78,12 @@ bool APIClient::getRoomStatus(RoomStatusData& data) {
     } else if (stateStr == "confirmation_required") {
         data.status = STATUS_AWAITING_CONFIRMATION;
         data.currentMeetingId = doc["current_meeting"]["id"].as<String>();
-        Serial.print("[API] Meeting ID: ");
-        Serial.println(data.currentMeetingId);
         if (doc["current_meeting"]["end"]) {
             data.currentMeetingEnd = doc["current_meeting"]["end"].as<unsigned long>();
         }
     } else if (stateStr == "in_progress") {
         data.status = STATUS_IN_PROGRESS;
         data.currentMeetingId = doc["current_meeting"]["id"].as<String>();
-        Serial.print("[API] Meeting ID: ");
-        Serial.println(data.currentMeetingId);
         if (doc["current_meeting"]["end"]) {
             data.currentMeetingEnd = doc["current_meeting"]["end"].as<unsigned long>();
         }
@@ -99,17 +96,11 @@ bool APIClient::getRoomStatus(RoomStatusData& data) {
     return true;
 }
 
-bool APIClient::quickBook(int durationMinutes) {
+bool APIClient::quickBook() {
     DynamicJsonDocument doc(512);
     String endpoint = "/api/v1/rooms/" + _roomId + "/quick-book";
     
-    DynamicJsonDocument payload(128);
-    payload["duration"] = durationMinutes;
-    
-    String payloadStr;
-    serializeJson(payload, payloadStr);
-    
-    return makeRequest("POST", endpoint, payloadStr, doc);
+    return makeRequest("POST", endpoint, "", doc);
 }
 
 bool APIClient::confirmMeeting(const String& meetingId) {

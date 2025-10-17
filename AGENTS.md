@@ -1,0 +1,1 @@
+../.github/copilot-instructions-client.md

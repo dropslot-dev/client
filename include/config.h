@@ -7,7 +7,7 @@
 #define SERVER_URL "http://192.168.13.133:8080"
 #define ROOM_ID "001"
 
-#define POLL_INTERVAL_MS 1000
+#define POLL_INTERVAL_MS 5000
 
 #define AUTH_ENABLED true
 
@@ -24,7 +24,7 @@
 
 #define DEBOUNCE_DELAY_MS 50
 #define HTTP_TIMEOUT_MS 10000
-#define WIFI_RETRY_DELAY_MS 5000
+#define WIFI_RETRY_DELAY_MS 2000
 
 #define LED_FPS 30
 

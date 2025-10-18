@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <time.h>
 #include "config.h"
 #include "led_controller.h"
 #include "button_handler.h"
@@ -15,6 +16,16 @@ String currentMeetingId = "";
 
 TaskHandle_t ledTaskHandle = NULL;
 TaskHandle_t buttonTaskHandle = NULL;
+
+String getTimestamp() {
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+        return "[--:--:--]";
+    }
+    char buffer[12];
+    strftime(buffer, sizeof(buffer), "[%H:%M:%S]", &timeinfo);
+    return String(buffer);
+}
 
 void handleButtonPress();
 
@@ -33,7 +44,7 @@ void buttonTask(void* parameter) {
 }
 
 void connectToWiFi() {
-    Serial.println("Connecting to WiFi...");
+    Serial.println(getTimestamp() + " Connecting to WiFi...");
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     
     ledController.setPattern(LED_WIFI_DISCONNECTED);
@@ -44,9 +55,12 @@ void connectToWiFi() {
         Serial.print(".");
     }
     
-    Serial.println("\nWiFi connected!");
-    Serial.print("IP address: ");
+    Serial.println("");
+    Serial.println(getTimestamp() + " WiFi connected!");
+    Serial.print(getTimestamp() + " IP address: ");
     Serial.println(WiFi.localIP());
+    
+    configTime(0, 0, "pool.ntp.org");
 }
 
 void setup() {
@@ -84,7 +98,7 @@ void setup() {
         1
     );
     
-    Serial.println("System ready!");
+    Serial.println(getTimestamp() + " System ready!");
 }
 
 void handleButtonPress() {
@@ -92,33 +106,35 @@ void handleButtonPress() {
         return;
     }
     
+    ledController.pulse();
+    
     switch (currentStatus) {
         case STATUS_FREE:
         if (apiClient->quickBook()) {
-                Serial.println("[Button] Quick-book - OK");
+                Serial.println(getTimestamp() + " [Button] Quick-book - OK");
             } else {
-                Serial.println("[Button] Quick-book - FAIL");
+                Serial.println(getTimestamp() + " [Button] Quick-book - FAIL");
             }
             break;
             
         case STATUS_AWAITING_CONFIRMATION:
         if (apiClient->confirmMeeting(currentMeetingId)) {
-                Serial.println("[Button] Confirm - OK");
+                Serial.println(getTimestamp() + " [Button] Confirm - OK");
             } else {
-                Serial.println("[Button] Confirm - FAIL");
+                Serial.println(getTimestamp() + " [Button] Confirm - FAIL");
             }
             break;
             
         case STATUS_IN_PROGRESS:
         if (apiClient->endMeeting(currentMeetingId)) {
-                Serial.println("[Button] End meeting - OK");
+                Serial.println(getTimestamp() + " [Button] End meeting - OK");
             } else {
-                Serial.println("[Button] End meeting - FAIL");
+                Serial.println(getTimestamp() + " [Button] End meeting - FAIL");
             }
             break;
             
         default:
-            Serial.println("[Button] Ignored");
+            Serial.println(getTimestamp() + " [Button] Ignored");
             break;
     }
     
@@ -141,11 +157,10 @@ void pollRoomStatus() {
     RoomStatusData statusData;
     
     if (!apiClient->getRoomStatus(statusData)) {
-        Serial.println("Failed to get room status");
-        Serial.print("Error: ");
+        Serial.print(getTimestamp() + " Failed to get room status: ");
         Serial.println(statusData.error);
         if (currentStatus != STATUS_ERROR) {
-            ledController.setPattern(LED_ERROR_RED_BLUE);
+            ledController.setPattern(LED_ERROR_WHITE);
             currentStatus = STATUS_ERROR;
         }
         return;
@@ -157,36 +172,30 @@ void pollRoomStatus() {
         
         switch (currentStatus) {
             case STATUS_FREE:
-                Serial.println("Status: FREE");
+                Serial.println(getTimestamp() + " Status: FREE");
                 ledController.setPattern(LED_SOLID_GREEN);
                 break;
                 
             case STATUS_UPCOMING:
-                Serial.println("Status: UPCOMING");
-                Serial.print("Next meeting starts at: ");
-                Serial.println(statusData.nextMeetingStart);
+                Serial.println(getTimestamp() + " Status: UPCOMING");
                 ledController.setPattern(LED_PULSING_BLUE);
                 break;
                 
             case STATUS_AWAITING_CONFIRMATION:
-                Serial.println("Status: AWAITING CONFIRMATION");
-                Serial.print("Current meeting ends at: ");
-                Serial.println(statusData.currentMeetingEnd);
+                Serial.println(getTimestamp() + " Status: AWAITING CONFIRMATION");
                 ledController.setPattern(LED_FLASHING_RED);
                 break;
                 
             case STATUS_IN_PROGRESS:
-                Serial.println("Status: IN PROGRESS");
-                Serial.print("Current meeting ends at: ");
-                Serial.println(statusData.currentMeetingEnd);
-                ledController.setPattern(LED_SLOW_PULSE_RED);
+                Serial.println(getTimestamp() + " Status: IN PROGRESS");
+                ledController.setPattern(LED_SOLID_RED);
                 break;
                 
             case STATUS_ERROR:
-                Serial.println("Status: ERROR");
-                Serial.print("Error: ");
+                Serial.println(getTimestamp() + " Status: ERROR");
+                Serial.print(getTimestamp() + " Error: ");
                 Serial.println(statusData.error);
-                ledController.setPattern(LED_ERROR_RED_BLUE);
+                ledController.setPattern(LED_ERROR_WHITE);
                 break;
         }
     }
@@ -194,7 +203,7 @@ void pollRoomStatus() {
 
 void loop() {
     if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("WiFi disconnected! Reconnecting...");
+        Serial.println(getTimestamp() + " WiFi disconnected! Reconnecting...");
         ledController.setPattern(LED_WIFI_DISCONNECTED);
         connectToWiFi();
     }

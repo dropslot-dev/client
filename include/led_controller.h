@@ -8,8 +8,8 @@ enum LEDPattern {
     LED_SOLID_GREEN,
     LED_PULSING_BLUE,
     LED_FLASHING_RED,
-    LED_SLOW_PULSE_RED,
-    LED_ERROR_RED_BLUE,
+    LED_SOLID_RED,
+    LED_ERROR_WHITE,
     LED_WIFI_DISCONNECTED
 };
 
@@ -20,12 +20,15 @@ public:
     void begin();
     void setPattern(LEDPattern pattern);
     void update();
+    void pulse();
 
 private:
     LEDPattern _currentPattern;
     unsigned long _lastUpdate;
     float _pulsePhase;
     bool _flashState;
+    bool _pulsing;
+    unsigned long _pulseStartTime;
     
     void setPWM(int r, int g, int b);
     void turnOff();

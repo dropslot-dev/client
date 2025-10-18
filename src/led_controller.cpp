@@ -2,7 +2,7 @@
 #include "config.h"
 
 LEDController::LEDController() 
-    : _currentPattern(LED_OFF), _lastUpdate(0), _pulsePhase(0), _flashState(false) {
+    : _currentPattern(LED_OFF), _lastUpdate(0), _pulsePhase(0), _flashState(false), _pulsing(false), _pulseStartTime(0) {
 }
 
 void LEDController::begin() {
@@ -33,7 +33,13 @@ void LEDController::setPattern(LEDPattern pattern) {
         _pulsePhase = 0;
         _flashState = false;
         _lastUpdate = millis();
+        _pulsing = false;
     }
+}
+
+void LEDController::pulse() {
+    _pulsing = true;
+    _pulseStartTime = millis();
 }
 
 void LEDController::update() {
@@ -51,9 +57,16 @@ void LEDController::update() {
             turnOff();
             break;
             
-        case LED_SOLID_GREEN:
-            setPWM(0, 255, 0);
+        case LED_SOLID_GREEN: {
+            if (_pulsing) {
+                float phase = (now % 1000) / 1000.0;
+                int brightness = (sin(phase * 2 * PI) + 1) * 127.5;
+                setPWM(0, brightness, 0);
+            } else {
+                setPWM(0, 255, 0);
+            }
             break;
+        }
             
         case LED_PULSING_BLUE: {
             float phase = (now % 2000) / 2000.0;
@@ -63,7 +76,11 @@ void LEDController::update() {
         }
         
         case LED_FLASHING_RED: {
-            if ((now % 500) < 250) {
+            if (_pulsing) {
+                float phase = (now % 1000) / 1000.0;
+                int brightness = (sin(phase * 2 * PI) + 1) * 127.5;
+                setPWM(brightness, 0, 0);
+            } else if ((now % 500) < 250) {
                 setPWM(255, 0, 0);
             } else {
                 turnOff();
@@ -71,28 +88,28 @@ void LEDController::update() {
             break;
         }
         
-        case LED_SLOW_PULSE_RED: {
-            float phase = (now % 3000) / 3000.0;
-            int brightness = (sin(phase * 2 * PI) + 1) * 127.5;
-            setPWM(brightness, 0, 0);
+        case LED_SOLID_RED: {
+            if (_pulsing) {
+                float phase = (now % 1000) / 1000.0;
+                int brightness = (sin(phase * 2 * PI) + 1) * 127.5;
+                setPWM(brightness, 0, 0);
+            } else {
+                setPWM(255, 0, 0);
+            }
             break;
         }
         
-        case LED_ERROR_RED_BLUE: {
-            if ((now % 2000) < 1000) {
-                setPWM(255, 0, 0);
-            } else {
-                setPWM(0, 0, 255);
-            }
+        case LED_ERROR_WHITE: {
+            float phase = (now % 2000) / 2000.0;
+            int brightness = (sin(phase * 2 * PI) + 1) * 127.5;
+            setPWM(brightness, brightness, brightness);
             break;
         }
         
         case LED_WIFI_DISCONNECTED: {
-            if ((now % 1000) < 500) {
-                setPWM(0, 255, 255);
-            } else {
-                setPWM(255, 0, 255);
-            }
+            float phase = (now % 2000) / 2000.0;
+            int brightness = (sin(phase * 2 * PI) + 1) * 127.5;
+            setPWM(0, brightness, brightness);
             break;
         }
     }

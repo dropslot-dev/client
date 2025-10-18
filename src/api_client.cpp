@@ -1,6 +1,9 @@
 #include "api_client.h"
 #include "auth_util.h"
 #include "config.h"
+#include <time.h>
+
+extern String getTimestamp();
 
 APIClient::APIClient(const String& serverUrl, const String& roomId, bool authEnabled)
     : _serverUrl(serverUrl), _roomId(roomId), _authEnabled(authEnabled) {
@@ -41,15 +44,15 @@ bool APIClient::makeRequest(const String& method, const String& endpoint, const 
             DeserializationError error = deserializeJson(response, responsePayload);
             if (!error) {
                 success = true;
-                Serial.println("[API] " + method + " " + endpoint + " - " + String(responseTime) + "ms");
+                Serial.println(getTimestamp() + " [API] " + method + " " + endpoint + " - " + String(responseTime) + "ms");
             } else {
-                Serial.println("[API] " + method + " " + endpoint + " - Parse error");
+                Serial.println(getTimestamp() + " [API] " + method + " " + endpoint + " - Parse error");
             }
         } else {
-            Serial.println("[API] " + method + " " + endpoint + " - HTTP " + String(httpCode) + " (" + String(responseTime) + "ms)");
+            Serial.println(getTimestamp() + " [API] " + method + " " + endpoint + " - HTTP " + String(httpCode) + " (" + String(responseTime) + "ms)");
         }
     } else {
-        Serial.println("[API] " + method + " " + endpoint + " - Request failed");
+        Serial.println(getTimestamp() + " [API] " + method + " " + endpoint + " - Request failed");
     }
     
     _http.end();

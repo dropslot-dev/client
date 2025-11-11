@@ -1,0 +1,150 @@
+hr {
+  margin-top: 2rem;
+  margin-bottom: 2.5rem;
+  border-width: 0;
+  border-top: 1px solid #E1E1E1;
+}
+
+.logo {
+    margin-top: 20px;
+    margin-left: 40px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 999;
+    font-weight: bolder;
+}
+
+#header {
+    height: 40px;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    right: 0;
+    padding-top: 5px;
+    background-color: #FbFbFb;
+    color:#888;
+    z-index: 998;
+    text-align: right;
+}
+
+#header h5 {
+    margin-right: 20px;
+    margin-top: 5px;
+}
+
+#footer {
+    height: 30px;
+    width: 100%;
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    font-size: 11px;
+    color:#888;
+}
+
+.version {
+    text-align: center;
+    font-size: 11px;
+    color:#888;
+}
+
+#sidebar {
+    height: 100%;
+    width: 120px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    padding: 60px 5px 0 5px;
+    border: 1px solid #ececec;
+    border-width: 0 1px 0 0;
+    z-index: 998;
+    background-color: #FbFbFb;
+}
+
+#content {
+    padding-left: 155px;
+    padding-top: 70px;
+    padding-right: 30px;
+}
+
+input[type="file"] {
+  display: none;
+}
+
+.custom-file-upload {
+  border: 1px solid #ccc;
+  display: inline-block;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  height: 25px;
+}
+
+.extrafunc {
+    position: absolute;
+    top: 30px;
+    right: -10px;
+}
+.grey {
+    color: #888
+}
+
+.text-primary {
+    color: #1EAEDB;
+}
+
+.text-success {
+    color: #60a75e;
+}
+
+.text-warning {
+    color: #f09e33;
+}
+
+.text-danger {
+    color: #c74f4f;
+}
+
+.hrborder {
+    border: 1px solid #ececec;
+    border-width: 0 0 1px 0;
+    max-width: 80%;
+}
+
+input:disabled {
+    background-color: #dddddd;
+}
+
+.w100 {
+    width: 100%;
+}
+
+.clear {
+    clear: both;
+}
+
+.hand {
+    cursor: pointer;
+}
+
+.center{
+    margin-left: 50%;
+}
+
+.hidden {
+    display: none;
+}
+
+.inputcomment {
+  color: #6e6e6e;;
+  font-size: 12px;
+  margin-top: -8px;
+  padding-left: 5px;
+}
+
+
+
+/* Start loading trick */
+#loadingStart {display: none !important;}
+#main { display: block !important; }

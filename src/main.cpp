@@ -1,14 +1,29 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <time.h>
+#include "Callback.h"
 #include "config.h"
+#include "log.h"
+#include "database.h"
 #include "led_controller.h"
 #include "button_handler.h"
 #include "api_client.h"
+#include "utilities.h"
+#include "wifinetwork.h"
+#include "webservice.h"
 
 LEDController ledController;
 ButtonHandler buttonHandler;
 APIClient* apiClient = nullptr;
+Log rlog;
+Database database(rlog);
+WifiNetwork wifi(rlog);
+Webservice webservice(rlog);
+
+
+// This signal will be emitted when we process characters
+// https://github.com/tomstewart89/Callback
+Signal<boolean> wifiStatusChanged;
 
 unsigned long lastPollTime = 0;
 RoomStatus currentStatus = STATUS_ERROR;
@@ -16,16 +31,6 @@ String currentMeetingId = "";
 
 TaskHandle_t ledTaskHandle = NULL;
 TaskHandle_t buttonTaskHandle = NULL;
-
-String getTimestamp() {
-    struct tm timeinfo;
-    if (!getLocalTime(&timeinfo)) {
-        return "[--:--:--]";
-    }
-    char buffer[12];
-    strftime(buffer, sizeof(buffer), "[%H:%M:%S]", &timeinfo);
-    return String(buffer);
-}
 
 void handleButtonPress();
 
@@ -66,8 +71,23 @@ void connectToWiFi() {
 }
 
 void setup() {
-    Serial.begin(115200);
+    setChipInfo();
+    rlog.setup();
 
+    Serial.println("\n=== Dropslot Room Controller ===");
+
+    database.setup();
+    wifi.setup(database, wifiStatusChanged);
+
+    // Must be after Wifi setup
+    webservice.setup(database);
+
+    // Connect to WiFi
+    wifi.connectWifi();
+
+
+
+    /*
     signed long serialInitTime = millis();
     while (millis() - serialInitTime < 1000) {
         // Wait up to (non-blocking) 1 second for Serial to initialize
@@ -103,8 +123,8 @@ void setup() {
         &buttonTaskHandle,
         1
     );
+*/
 
-    Serial.println(getTimestamp() + " System ready!");
 }
 
 void handleButtonPress() {

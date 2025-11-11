@@ -24,7 +24,7 @@ struct RoomStatusData {
 class APIClient {
 public:
     APIClient(const String& serverUrl, const String& roomId, bool authEnabled);
-    
+
     bool getRoomStatus(RoomStatusData& data);
     bool quickBook();
     bool confirmMeeting(const String& meetingId);
@@ -36,8 +36,8 @@ private:
     bool _authEnabled;
     String _authToken;
     HTTPClient _http;
-    
-    bool makeRequest(const String& method, const String& endpoint, const String& payload, DynamicJsonDocument& response);
+
+    bool makeRequest(const String& method, const String& endpoint, const String& payload, JsonDocument& response);
 };
 
 #endif

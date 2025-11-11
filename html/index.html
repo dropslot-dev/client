@@ -1,0 +1,95 @@
+<!DOCTYPE HTML><html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+	<meta http-equiv="Pragma" content="no-cache" />
+	<meta http-equiv="Expires" content="0" />
+	<title>DropSlot Administration</title>
+	<style>
+		@keyframes spin {
+			0% { transform: rotate(0deg); }
+			100% { transform: rotate(360deg); }
+		}
+	</style>
+</head>
+<body>
+
+	<div id="loadingStart" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #b3b3b3; z-index: 999;">
+		<div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 1000; font-family: Arial, Helvetica, sans-serif; font-size: 25px; color: white;">
+			<div style="width: 60px; height: 60px; border: 6px solid #f3f3f3; border-top: 6px solid #33C3F0; border-radius: 50%; animation: spin 2s linear infinite; margin: 0 auto 20px auto;"></div>
+			<div>Loading...</div>
+		</div>
+	</div>
+
+
+
+	<div id="main" style="display: none;">
+		<div id="loader" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #b3b3b3; z-index: 999;">
+			<div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 1000; font-family: Arial, Helvetica, sans-serif; font-size: 25px; color: white;">
+				<div style="width: 60px; height: 60px; border: 6px solid #f3f3f3; border-top: 6px solid #33C3F0; border-radius: 50%; animation: spin 2s linear infinite; margin: 0 auto 20px auto;"></div>
+				<div>Loading...</div>
+			</div>
+		</div>
+		<div class="logo">
+			DropSlot
+		</div>
+		<div id="header">
+			<div class="row">
+				<h5><strong>Drop</strong><i>Slot</i></h5>
+			</div>
+		</div>
+		<div id="sidebar">
+			<a class="button w100" href="/">home</a>
+			<a class="button w100" href="/update">update</a>
+			<!--<a class="button w100 button-danger" id="reset" href="#">reset</a>-->
+			<div class="version" id="version">%VERSION%</div>
+			<div class="version" id="chip"></div>
+
+			<div id="footer">
+				<div><a href="https://dropslot.dev/" target="_blank">DropSlot</a></div>
+			</div>
+
+		</div>
+		<div id="content">
+			<div class="contaier">
+
+				<!-- The Modal -->
+				<div id="myModal" class="modal" style="display: none;">
+
+					<!-- Modal content -->
+					<div class="modal-content">
+					<span class="close">&times;</span>
+					<p>Some text in the Modal..</p>
+					</div>
+
+				</div>
+
+				<div class="row">
+				<form id="dataform">
+					<div class="row" style="position: relative">
+						<h5 class="grey hrborder">Network settings</h5>
+					</div>
+					<div class="row">
+						<div class="six columns">
+							<label for="ssid">WiFi name</label>
+							<input type="text" class="u-full-width" name="ssid" id="ssid" placeholder="SSID">
+						</div>
+						<div class="six columns">
+							<label for="pw">Password</label>
+							<input type="password" class="u-full-width" name="pw" id="pw" placeholder="Password">
+						</div>
+					</div>
+
+					<div class="row" style="height: 30px;"></div>
+
+					<input class="button-primary" type="button" value="Submit" id="savebutton" onclick="save()">
+				</form>
+				</div>
+			</div>
+		</div>
+		<script type="text/javascript" src="/functions.js"></script>
+	</div>
+
+</body>
+</html>

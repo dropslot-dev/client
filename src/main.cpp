@@ -14,12 +14,13 @@
 
 LEDController ledController;
 ButtonHandler buttonHandler;
-APIClient* apiClient = nullptr;
 Log rlog;
 Database database(rlog);
 WifiNetwork wifi(rlog);
 Webservice webservice(rlog);
+APIClient apiClient(rlog);
 
+Logger logger(rlog, "[MAIN]");
 
 // This signal will be emitted when we process characters
 // https://github.com/tomstewart89/Callback
@@ -36,7 +37,7 @@ void handleButtonPress();
 
 void ledTask(void* parameter) {
     for(;;) {
-        ledController.update();
+        ledController.loop();
         vTaskDelay(1000 / LED_FPS / portTICK_PERIOD_MS);
     }
 }
@@ -48,6 +49,7 @@ void buttonTask(void* parameter) {
     }
 }
 
+/*
 void connectToWiFi() {
     Serial.println(getTimestamp() + " Connecting to WiFi...");
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -69,12 +71,13 @@ void connectToWiFi() {
 
     configTime(0, 0, "pool.ntp.org");
 }
+*/
 
 void setup() {
     setChipInfo();
     rlog.setup();
 
-    Serial.println("\n=== Dropslot Room Controller ===");
+    logger << "\n=== Dropslot Room Controller ===";
 
     database.setup();
     wifi.setup(database, wifiStatusChanged);
@@ -84,6 +87,11 @@ void setup() {
 
     // Connect to WiFi
     wifi.connectWifi();
+
+    apiClient.setup(database);
+
+    ledController.setup();
+    buttonHandler.setup();
 
 
 
@@ -136,7 +144,7 @@ void handleButtonPress() {
 
     switch (currentStatus) {
         case STATUS_FREE:
-        if (apiClient->quickBook()) {
+        if (apiClient.quickBook()) {
                 Serial.println(getTimestamp() + " [Button] Quick-book - OK");
             } else {
                 Serial.println(getTimestamp() + " [Button] Quick-book - FAIL");
@@ -144,7 +152,7 @@ void handleButtonPress() {
             break;
 
         case STATUS_AWAITING_CONFIRMATION:
-        if (apiClient->confirmMeeting(currentMeetingId)) {
+        if (apiClient.confirmMeeting(currentMeetingId)) {
                 Serial.println(getTimestamp() + " [Button] Confirm - OK");
             } else {
                 Serial.println(getTimestamp() + " [Button] Confirm - FAIL");
@@ -152,7 +160,7 @@ void handleButtonPress() {
             break;
 
         case STATUS_IN_PROGRESS:
-        if (apiClient->endMeeting(currentMeetingId)) {
+        if (apiClient.endMeeting(currentMeetingId)) {
                 Serial.println(getTimestamp() + " [Button] End meeting - OK");
             } else {
                 Serial.println(getTimestamp() + " [Button] End meeting - FAIL");
@@ -182,7 +190,7 @@ void pollRoomStatus() {
 
     RoomStatusData statusData;
 
-    if (!apiClient->getRoomStatus(statusData)) {
+    if (!apiClient.getRoomStatus(statusData)) {
         Serial.print(getTimestamp() + " Failed to get room status: ");
         Serial.println(statusData.error);
         if (currentStatus != STATUS_ERROR) {
@@ -228,11 +236,12 @@ void pollRoomStatus() {
 }
 
 void loop() {
-    if (WiFi.status() != WL_CONNECTED) {
-        Serial.println(getTimestamp() + " WiFi disconnected! Reconnecting...");
-        ledController.setPattern(LED_WIFI_DISCONNECTED);
-        connectToWiFi();
-    }
+    wifi.loop();
+    webservice.loop();
+    apiClient.loop();
+    buttonHandler.loop();
+    ledController.loop();
 
+    // old logic, needs to be refactored
     pollRoomStatus();
 }

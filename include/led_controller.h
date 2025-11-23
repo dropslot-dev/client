@@ -16,10 +16,10 @@ enum LEDPattern {
 class LEDController {
 public:
     LEDController();
-    
-    void begin();
+
+    void setup();
     void setPattern(LEDPattern pattern);
-    void update();
+    void loop();
     void pulse();
 
 private:
@@ -29,7 +29,7 @@ private:
     bool _flashState;
     bool _pulsing;
     unsigned long _pulseStartTime;
-    
+
     void setPWM(int r, int g, int b);
     void turnOff();
 };

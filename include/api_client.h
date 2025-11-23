@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include "log.h"
+#include "database.h"
 
 enum RoomStatus {
     STATUS_FREE,
@@ -23,7 +25,12 @@ struct RoomStatusData {
 
 class APIClient {
 public:
-    APIClient(const String& serverUrl, const String& roomId, bool authEnabled);
+    APIClient(Log& rlog);
+    Logger logger;
+    Database* database;
+
+    void setup(Database &database);
+    void loop();
 
     bool getRoomStatus(RoomStatusData& data);
     bool quickBook();
@@ -37,7 +44,11 @@ private:
     String _authToken;
     HTTPClient _http;
 
+    unsigned long _lastPollTime;
+    bool _initialized;
+
     bool makeRequest(const String& method, const String& endpoint, const String& payload, JsonDocument& response);
+    void pollStatus();
 };
 
 #endif

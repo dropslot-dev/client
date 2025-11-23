@@ -271,7 +271,11 @@ function collectData (){
     const inputs = form.elements;
     for (let i = 0; i < inputs.length; i++) {
         if (inputs[i].name) {
-            values[inputs[i].name] = encodeURIComponent(inputs[i].value);
+            if (inputs[i].type === 'checkbox') {
+                values[inputs[i].name] = inputs[i].checked;
+            } else {
+                values[inputs[i].name] = encodeURIComponent(inputs[i].value);
+            }
         }
     }
     return values;
@@ -280,8 +284,13 @@ function collectData (){
 
 function fillData() {
     Object.entries(boardData).forEach(([key, value]) => {
-        if (getItem(key)) {
-            getItem(key).value = value;
+        var element = getItem(key);
+        if (element) {
+            if (element.type === 'checkbox') {
+                element.checked = value === true || value === 'true';
+            } else {
+                element.value = value;
+            }
         }
     });
 }
@@ -352,7 +361,7 @@ function getFileName(obj) {
 // Main code execution starts here
 
 setTimeout(function() {
-    if (location.pathname == "/" || location.pathname.includes("features")) {
+    if (location.pathname == "/" || location.pathname.includes("index.html") || location.pathname.includes("features")) {
         getData();
     }
 }, 300);

@@ -71,7 +71,7 @@ boolean WifiNetwork::isConnected() {
 
 void WifiNetwork::loop() {
     if(wifi_connected) {
-        wifiConnectedLoop();
+        wifiConnectedLoop(); // Acually do nothing for now
     } else {
         wifiDisconnectedLoop();
         dnsServer.processNextRequest();

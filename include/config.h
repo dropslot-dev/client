@@ -6,17 +6,8 @@
 #define EEPROM_SIZE 1024
 #define COMMAND_CONFIG "config"
 
-#define WIFI_SSID ""
-#define WIFI_PASSWORD ""
-
 #define SERIAL_SPEED 115200
-
-#define SERVER_URL "http://192.168.13.133:8080"
-#define ROOM_ID "001"
-
-#define POLL_INTERVAL_MS 5000
-
-#define AUTH_ENABLED true
+#define POLL_INTERVAL_MS 5000 // THIS MUST GO TO DATABASE
 
 #define RED_PIN     25
 #define GREEN_PIN   26
@@ -50,6 +41,9 @@
 #define DB_WIFI_PASSWORD "pw"
 #define DB_VERSION "version"
 #define DB_DEVICE_ID "deviceid"
+#define DB_SERVER_URL "serverurl"
+#define DB_ROOM_ID "roomid"
+#define DB_AUTH_ENABLED "authenabled"
 
 
 #endif

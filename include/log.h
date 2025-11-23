@@ -40,6 +40,7 @@ class Logger {
     public:
         Logger(Log& log_, const char* prefix_);
         LogEntry operator << (const char* message);
+        LogEntry operator << (const String& message);
 
     private:
         Log& l;

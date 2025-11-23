@@ -16,7 +16,7 @@ void Log::addBlueToothSerial(BluetoothSerial* bts){
 
 bool Log::checkBlueToothSerial() {
 
-    if (blueToothSerial == NULL) 
+    if (blueToothSerial == NULL)
         return false;
 
     if (!this->blueToothSerial->hasClient())
@@ -27,7 +27,7 @@ bool Log::checkBlueToothSerial() {
 
 void Log::logBlueToothSerial(char message) {
 
-    if (!checkBlueToothSerial()) 
+    if (!checkBlueToothSerial())
         return;
 
     this->blueToothSerial->print(message);
@@ -35,7 +35,7 @@ void Log::logBlueToothSerial(char message) {
 
 void Log::logBlueToothSerial(const char* message) {
 
-    if (!checkBlueToothSerial()) 
+    if (!checkBlueToothSerial())
         return;
 
     this->blueToothSerial->print(message);
@@ -43,7 +43,7 @@ void Log::logBlueToothSerial(const char* message) {
 
 void Log::logBlueToothSerial(const String& message) {
 
-    if (!checkBlueToothSerial()) 
+    if (!checkBlueToothSerial())
         return;
 
     this->blueToothSerial->print(message);
@@ -93,6 +93,12 @@ Logger::Logger(Log& log_, const char* prefix_) : l(log_), prefix(prefix_) {
 }
 
 LogEntry Logger::operator << (const char* message) {
+    LogEntry logEntry(this->l, this->prefix);
+    logEntry << message;
+    return logEntry;
+}
+
+LogEntry Logger::operator << (const String& message) {
     LogEntry logEntry(this->l, this->prefix);
     logEntry << message;
     return logEntry;

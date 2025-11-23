@@ -6,9 +6,10 @@
 class ButtonHandler {
 public:
     ButtonHandler();
-    
-    void begin();
-    bool wasPressed();
+
+    void setup();
+    void loop();
+    bool wasPressed(); // This must be refactored, move the logic to loop
 
 private:
     bool _lastState;

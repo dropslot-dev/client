@@ -1,11 +1,17 @@
 #include "led_controller.h"
-#include "config.h"
 
-LEDController::LEDController()
-    : _currentPattern(LED_OFF), _lastUpdate(0), _pulsePhase(0), _flashState(false), _pulsing(false), _pulseStartTime(0) {
+
+LEDController::LEDController(Log& rlog) : logger(rlog, "[LED]") {
 }
 
 void LEDController::setup() {
+    _currentPattern = LED_OFF;
+    _lastUpdate = 0;
+    _pulsePhase = 0;
+    _flashState = false;
+    _pulsing = false;
+    _pulseStartTime = 0;
+
     ledcSetup(RED_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
     ledcSetup(GREEN_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
     ledcSetup(BLUE_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
@@ -51,6 +57,50 @@ void LEDController::loop() {
     }
 
     _lastUpdate = now;
+
+    applyPattern();
+}
+
+void LEDController::setRoomStatus(RoomStatusData status) {
+    if (status.status != _roomStatus.status) {
+        _roomStatus = status;
+    }
+
+    updateLedPattern();
+}
+
+void LEDController::updateLedPattern() {
+        switch (_roomStatus.status) {
+            case STATUS_FREE:
+                logger << getTimestamp() + " Status: FREE";
+                setPattern(LED_SOLID_GREEN);
+                break;
+
+            case STATUS_UPCOMING:
+                logger << getTimestamp() + " Status: UPCOMING";
+                setPattern(LED_PULSING_BLUE);
+                break;
+
+            case STATUS_AWAITING_CONFIRMATION:
+                logger << getTimestamp() + " Status: AWAITING CONFIRMATION";
+                setPattern(LED_FLASHING_RED);
+                break;
+
+            case STATUS_IN_PROGRESS:
+                logger << getTimestamp() + " Status: IN PROGRESS";
+                setPattern(LED_SOLID_RED);
+                break;
+
+            case STATUS_ERROR:
+                logger << getTimestamp() + " Status: ERROR";
+                logger << getTimestamp() + " Error: " + _roomStatus.error;
+                setPattern(LED_ERROR_WHITE);
+                break;
+        }
+}
+
+void LEDController::applyPattern() {
+    unsigned long now = millis();
 
     switch (_currentPattern) {
         case LED_OFF:

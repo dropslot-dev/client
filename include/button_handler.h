@@ -2,19 +2,23 @@
 #define BUTTON_HANDLER_H
 
 #include <Arduino.h>
+#include "log.h"
+#include "Callback.h"
 
 class ButtonHandler {
 public:
-    ButtonHandler();
-
-    void setup();
+    ButtonHandler(Log& rlog);
+    void setup(Signal<boolean>& buttonPressed);
     void loop();
-    bool wasPressed(); // This must be refactored, move the logic to loop
 
 private:
-    bool _lastState;
+    Logger logger;
+    Signal<boolean>* buttonState;
+    bool _buttonState;
     unsigned long _lastDebounceTime;
-    bool _buttonPressed;
+    bool _pressStatus;
+    bool _lastReading;
+    bool _stableState;
 };
 
 #endif

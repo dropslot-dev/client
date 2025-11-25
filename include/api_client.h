@@ -6,46 +6,38 @@
 #include <ArduinoJson.h>
 #include "log.h"
 #include "database.h"
-
-enum RoomStatus {
-    STATUS_FREE,
-    STATUS_UPCOMING,
-    STATUS_AWAITING_CONFIRMATION,
-    STATUS_IN_PROGRESS,
-    STATUS_ERROR
-};
-
-struct RoomStatusData {
-    RoomStatus status;
-    unsigned long nextMeetingStart;
-    unsigned long currentMeetingEnd;
-    String currentMeetingId;
-    String error;
-};
-
+#include "Callback.h"
+#include "types.h"
 class APIClient {
 public:
     APIClient(Log& rlog);
     Logger logger;
-    Database* database;
 
-    void setup(Database &database);
+    void setup(Database &database, Signal<RoomStatusData>& roomStatusChanged);
     void loop();
 
-    bool getRoomStatus(RoomStatusData& data);
+    bool getRoomStatus();
     bool quickBook();
     bool confirmMeeting(const String& meetingId);
     bool endMeeting(const String& meetingId);
+    void setConnected(bool connected);
+    void handleButtonPress(bool pressed);
 
 private:
+    Database* database;
     String _serverUrl;
     String _roomId;
     bool _authEnabled;
     String _authToken;
     HTTPClient _http;
+    Signal<RoomStatusData>* _roomStatusChanged;
 
     unsigned long _lastPollTime;
     bool _initialized;
+    bool _connected;
+    bool _buttonPressProcessed;
+    RoomStatus _roomStatus = STATUS_ERROR;
+    RoomStatusData _roomStatusData;
 
     bool makeRequest(const String& method, const String& endpoint, const String& payload, JsonDocument& response);
     void pollStatus();

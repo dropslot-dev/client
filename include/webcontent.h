@@ -226,7 +226,11 @@ const values = {};
 const inputs = form.elements;
 for (let i = 0; i < inputs.length; i++) {
 if (inputs[i].name) {
+if (inputs[i].type === 'checkbox') {
+values[inputs[i].name] = inputs[i].checked;
+} else {
 values[inputs[i].name] = encodeURIComponent(inputs[i].value);
+}
 }
 }
 return values;
@@ -234,8 +238,13 @@ return values;
 
 function fillData() {
 Object.entries(boardData).forEach(([key, value]) => {
-if (getItem(key)) {
-getItem(key).value = value;
+var element = getItem(key);
+if (element) {
+if (element.type === 'checkbox') {
+element.checked = value === true || value === 'true';
+} else {
+element.value = value;
+}
 }
 });
 }
@@ -295,7 +304,7 @@ error.style.display = "block";
 }
 // Main code execution starts here
 setTimeout(function() {
-if (location.pathname == "/" || location.pathname.includes("features")) {
+if (location.pathname == "/" || location.pathname.includes("index.html") || location.pathname.includes("features")) {
 getData();
 }
 }, 300);
@@ -371,7 +380,7 @@ DropSlot
 <a class="button w100" href="/">home</a>
 <a class="button w100" href="/update">update</a>
 <!--<a class="button w100 button-danger" id="reset" href="#">reset</a>-->
-<div class="version" id="version">v1.1 - 10</div>
+<div class="version" id="version">v1.1 - 11</div>
 <div class="version" id="chip"></div>
 <div id="footer">
 <div><a href="https://dropslot.dev/" target="_blank">DropSlot</a></div>
@@ -400,6 +409,25 @@ DropSlot
 <div class="six columns">
 <label for="pw">Password</label>
 <input type="password" class="u-full-width" name="pw" id="pw" placeholder="Password">
+</div>
+</div>
+<div class="row" style="position: relative">
+<h5 class="grey hrborder">Device settings</h5>
+</div>
+<div class="row">
+<div class="six columns">
+<label for="serverurl">Server URL</label>
+<input type="text" class="u-full-width" name="serverurl" id="serverurl" placeholder="Server URL">
+</div>
+<div class="six columns">
+<label for="roomid">Room ID</label>
+<input type="text" class="u-full-width" name="roomid" id="roomid" placeholder="Room ID">
+</div>
+</div>
+<div class="row">
+<div class="six columns" style="display: flex; align-items: center;">
+<label for="authenabled" style="margin-right: 10px;">Authentication enabled</label>
+<input type="checkbox" name="authenabled" id="authenabled" style="margin-top: 10px;">
 </div>
 </div>
 <div class="row" style="height: 30px;"></div>
@@ -1309,7 +1337,7 @@ DropSlot
 <a class="button w100" href="/">home</a>
 <a class="button w100" href="/update">update</a>
 <!--<a class="button w100 button-danger" id="reset" href="#">reset</a>-->
-<div class="version" id="version">v1.1 - 10</div>
+<div class="version" id="version">v1.1 - 11</div>
 <div id="footer">
 <div><a href="https://dropslot.dev/" target="_blank">DropSlot</a></div>
 </div>

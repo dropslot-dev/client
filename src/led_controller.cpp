@@ -9,7 +9,7 @@ void LEDController::setup() {
     _lastUpdate = 0;
     _pulsePhase = 0;
     _flashState = false;
-    _pulsing = false;
+    _pulsing = true;
     _pulseStartTime = 0;
 
     ledcSetup(RED_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
@@ -41,11 +41,6 @@ void LEDController::setPattern(LEDPattern pattern) {
         _lastUpdate = millis();
         _pulsing = false;
     }
-}
-
-void LEDController::pulse() {
-    _pulsing = true;
-    _pulseStartTime = millis();
 }
 
 void LEDController::loop() {

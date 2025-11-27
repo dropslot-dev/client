@@ -87,15 +87,15 @@ String Database::getValueAsString(String name, bool loadbefore) {
 }
 
 int Database::getValueAsInt(String name) {
-    return getValueAsInt(name, false);
+    return getValueAsInt(name, false, 0);
 }
 
-int Database::getValueAsInt(String name, bool loadbefore) {
+int Database::getValueAsInt(String name, bool loadbefore, int defaultValue) {
     if (loadbefore){
         load();
     }
 
-    int ret = -1;
+    int ret = defaultValue;
     if (jsonData[name].is<const char*>()) {
         String value = jsonData[name.c_str()].as<String>();
 

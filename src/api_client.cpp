@@ -17,6 +17,7 @@ void APIClient::setup(Database &database, Signal<RoomStatusData>& roomStatusChan
     this -> _serverUrl = this -> database -> getValueAsString(String(DB_SERVER_URL), false);
     this -> _roomId = this -> database -> getValueAsString(String(DB_ROOM_ID), false);
     this -> _authEnabled = this -> database -> getValueAsBoolean(String(DB_AUTH_ENABLED), false, false);
+    this -> _pollIntervalMs = this -> database -> getValueAsInt(String(DB_POLL_INTERVAL), false, DEFAULT_POLL_INTERVAL_MS);
 
     if (_authEnabled) {
         _authToken = computeRoomIdHash(_roomId);
@@ -89,7 +90,7 @@ void APIClient::handleButtonPress(bool pressed) {
 void APIClient::pollStatus() {
     unsigned long now = millis();
 
-    if (now - _lastPollTime < POLL_INTERVAL_MS) {
+    if (now - _lastPollTime < _pollIntervalMs) {
         return;
     }
     _lastPollTime = now;

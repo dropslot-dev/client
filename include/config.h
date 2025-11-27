@@ -7,7 +7,7 @@
 #define COMMAND_CONFIG "config"
 
 #define SERIAL_SPEED 115200
-#define POLL_INTERVAL_MS 5000 // THIS MUST GO TO DATABASE
+#define DEFAULT_POLL_INTERVAL_MS 5000
 
 #define RED_PIN     25
 #define GREEN_PIN   26
@@ -44,6 +44,6 @@
 #define DB_SERVER_URL "serverurl"
 #define DB_ROOM_ID "roomid"
 #define DB_AUTH_ENABLED "authenabled"
-
+#define DB_POLL_INTERVAL "pollinterval"
 
 #endif

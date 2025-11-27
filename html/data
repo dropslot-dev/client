@@ -1,1 +1,1 @@
-{"ssid":"myssid","pw":"password1234","roomid":"001","serverurl":"https://www.example.com","authenabled":"false"}
+{"ssid":"myssid","pw":"password1234","roomid":"001","serverurl":"https://www.example.com","authenabled":"false", "pollinterval":"5000"}

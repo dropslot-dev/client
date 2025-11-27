@@ -36,6 +36,7 @@ private:
     bool _initialized;
     bool _connected;
     bool _buttonPressProcessed;
+    unsigned long _pollIntervalMs;
     RoomStatus _roomStatus = STATUS_ERROR;
     RoomStatusData _roomStatusData;
 

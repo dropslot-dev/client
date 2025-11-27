@@ -380,7 +380,7 @@ DropSlot
 <a class="button w100" href="/">home</a>
 <a class="button w100" href="/update">update</a>
 <!--<a class="button w100 button-danger" id="reset" href="#">reset</a>-->
-<div class="version" id="version">v1.1 - 11</div>
+<div class="version" id="version">v1.1 - 12</div>
 <div class="version" id="chip"></div>
 <div id="footer">
 <div><a href="https://dropslot.dev/" target="_blank">DropSlot</a></div>
@@ -422,6 +422,12 @@ DropSlot
 <div class="six columns">
 <label for="roomid">Room ID</label>
 <input type="text" class="u-full-width" name="roomid" id="roomid" placeholder="Room ID">
+</div>
+</div>
+<div class="row">
+<div class="six columns">
+<label for="pollinterval">Poll Interval (ms)</label>
+<input type="number" class="u-full-width" name="pollinterval" id="pollinterval" placeholder="Poll Interval">
 </div>
 </div>
 <div class="row">
@@ -1337,7 +1343,7 @@ DropSlot
 <a class="button w100" href="/">home</a>
 <a class="button w100" href="/update">update</a>
 <!--<a class="button w100 button-danger" id="reset" href="#">reset</a>-->
-<div class="version" id="version">v1.1 - 11</div>
+<div class="version" id="version">v1.1 - 12</div>
 <div id="footer">
 <div><a href="https://dropslot.dev/" target="_blank">DropSlot</a></div>
 </div>

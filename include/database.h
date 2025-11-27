@@ -32,7 +32,7 @@ class Database {
         String getValueAsString(String name);
         String getValueAsString(String name, bool loadbefore);
         int getValueAsInt(String name);
-        int getValueAsInt(String name, bool loadbefore);
+        int getValueAsInt(String name, bool loadbefore, int defaultValue);
         boolean getValueAsBoolean(String name, bool loadbefore, bool defaultReturn);
         boolean isPropertyExists(String property);
         boolean isPropertyExistsAndNonEmpty(String property);

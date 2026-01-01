@@ -22,6 +22,7 @@ enum RoomStatus {
 
 struct RoomStatusData {
     RoomStatus status;
+    RoomStatus previousStatus;
     unsigned long nextMeetingStart;
     unsigned long currentMeetingEnd;
     String currentMeetingId;

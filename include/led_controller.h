@@ -14,8 +14,8 @@ public:
     void setup();
     void setPattern(LEDPattern pattern);
     void loop();
-    void pulse();
     void setRoomStatus(RoomStatusData status);
+    void setConnected(bool connected);
 
 private:
     LEDPattern _currentPattern;
@@ -24,6 +24,7 @@ private:
     float _pulsePhase;
     bool _flashState;
     bool _pulsing;
+    bool _connected;
     RoomStatusData _roomStatus;
     unsigned long _pulseStartTime;
 

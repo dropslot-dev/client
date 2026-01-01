@@ -96,8 +96,8 @@ void APIClient::pollStatus() {
     _lastPollTime = now;
 
     if (!getRoomStatus()) {
-        Serial.print(getTimestamp() + " Failed to get room status: ");
-        Serial.println(_roomStatusData.error);
+        logger << getTimestamp() + " Failed to get room status: ";
+        logger << _roomStatusData.error;
         if (_roomStatus != STATUS_ERROR) {
             _roomStatus = STATUS_ERROR;
         }
@@ -169,7 +169,7 @@ bool APIClient::getRoomStatus() {
         return false;
     }
 
-    String stateStr = doc["state"].as<String>();
+    String stateStr = doc[0]["state"].as<String>();
 
     if (stateStr == "free") {
         _roomStatusData.status = STATUS_FREE;

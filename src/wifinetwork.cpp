@@ -1,68 +1,78 @@
 #include "wifinetwork.h"
+#include <time.h>
+
+#define WIFI_RECONNECT_INTERVAL 5000   // 5 seconds
 
 WifiNetwork::WifiNetwork(Log& rlog) : logger(rlog, "[WIFI]") {
     wifi_connected = false;
     tries = 0;
     APstart = 0;
+    lastReconnectAttempt = 0;
+    apFallbackActive = false;
 }
 
 void WifiNetwork::setup(Database &database, Signal<boolean> &wifiStatusChanged){
 
-    this -> database = &database;
+    this->database = &database;
 
-    this -> ssid = this -> database -> getValueAsString(String(DB_WIFI_NAME), false);
-    this -> password = this -> database -> getValueAsString(String(DB_WIFI_PASSWORD), false);
+    this->ssid = this->database->getValueAsString(String(DB_WIFI_NAME), false);
+    this->password = this->database->getValueAsString(String(DB_WIFI_PASSWORD), false);
 
-    this -> wifiStatusChanged = &wifiStatusChanged;
+    this->wifiStatusChanged = &wifiStatusChanged;
 
     uniqueBoardname = BOARD_NAME "_" + WiFi.macAddress();
     uniqueBoardname.replace(":","");
     logger << "Unique board name (hostname) is: " << uniqueBoardname;
 
     WiFi.onEvent(
-    [this](WiFiEvent_t event, WiFiEventInfo_t info) {
-        this->WiFiEvent(event);
-    });
+        [this](WiFiEvent_t event, WiFiEventInfo_t info) {
+            this->WiFiEvent(event);
+        }
+    );
 
-    configAP();
     WiFi.mode(WIFI_AP_STA);
-
+    configAP();
     setupMDNS();
+
+    this->wifiStatusChanged->fire(false);
 }
 
 void WifiNetwork::connectWifi() {
+    apFallbackActive = false;
+    tries = 0;
+
     if (ssid.length() > 0) {
-        this -> connectToAP();
+        connectToAP();
     } else {
-        logger << "Cannot connect to wifi, because no SSID was defined. Create an AP.";
+        logger << "No SSID defined, creating AP";
         createAP();
     }
-
 }
 
 void WifiNetwork::disconnectWifi() {
     WiFi.disconnect();
-    logger << "Wifi is disconnected from a function.";
+    logger << "Wifi disconnected manually";
 }
 
 void WifiNetwork::connectToAP() {
-    WiFi.mode(WIFI_STA);
+    WiFi.mode(WIFI_AP_STA);
     WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE);
-    WiFi.begin(const_cast<char*>(ssid.c_str()), const_cast<char*>(password.c_str()));
     WiFi.setHostname(uniqueBoardname.c_str());
+    WiFi.begin(ssid.c_str(), password.c_str());
 }
 
 void WifiNetwork::createAP() {
+    WiFi.mode(WIFI_AP_STA);
     configAP();
-    WiFi.mode(WIFI_AP);
     APstart = millis();
-    logger << "AP is created from a function. Name: " << BOARD_NAME;
+    logger << "AP created";
 }
 
 void WifiNetwork::stopAP() {
-    WiFi.softAPdisconnect();
+    dnsServer.stop();
+    WiFi.softAPdisconnect(true);
     WiFi.enableAP(false);
-    logger << "AP disconnected from a function.";
+    logger << "AP stopped";
 }
 
 boolean WifiNetwork::isConnected() {
@@ -70,11 +80,10 @@ boolean WifiNetwork::isConnected() {
 }
 
 void WifiNetwork::loop() {
-    if(wifi_connected) {
-        wifiConnectedLoop(); // Acually do nothing for now
+    if (wifi_connected) {
+        wifiConnectedLoop();
     } else {
         wifiDisconnectedLoop();
-        dnsServer.processNextRequest();
     }
 }
 
@@ -82,85 +91,100 @@ void WifiNetwork::WiFiEvent(WiFiEvent_t event) {
     switch(event) {
 
         case SYSTEM_EVENT_AP_START:
-            //can set ap hostname here
             WiFi.softAPsetHostname(uniqueBoardname.c_str());
-            //enable ap ipv6 here
-            // WiFi.softAPenableIpV6();
-
             logger << "AP started. SSID: " << BOARD_NAME << " AP IPv4: " << WiFi.softAPIP().toString();
             break;
 
         case SYSTEM_EVENT_STA_START:
-            //set sta hostname here
             WiFi.setHostname(uniqueBoardname.c_str());
-            logger << "Wifi hostname set to " << uniqueBoardname;
+            logger << "STA started";
             break;
-        case SYSTEM_EVENT_STA_CONNECTED:
-            // enable sta ipv6 here
-            // WiFi.enableIpV6();
-            break;
-        case SYSTEM_EVENT_AP_STA_GOT_IP6:
-            //both interfaces get the same event
-            // log -> log("STA IPv6: ");
-            // log -> log(WiFi.localIPv6());
-            // log -> log("AP IPv6: ");
-            // log -> log(WiFi.softAPIPv6());
-            break;
+
         case SYSTEM_EVENT_STA_GOT_IP:
             wifiOnConnect();
             break;
+
         case SYSTEM_EVENT_STA_DISCONNECTED:
             wifiOnDisconnect();
             break;
+
         default:
             break;
     }
 }
 
-// when wifi connects
+// Called when WiFi connects successfully
 void WifiNetwork::wifiOnConnect() {
     tries = 0;
-    stopAP();
+    lastReconnectAttempt = 0;
+    apFallbackActive = false;
+
     wifi_connected = true;
+    stopAP();
 
-    // Emit an event about the Wifi status
-    wifiStatusChanged->fire(wifi_connected);
-    logger << "STA Connected. STA SSID: " << WiFi.SSID() << " STA IPv4: " << WiFi.localIP().toString() << ", GW: " << WiFi.gatewayIP().toString() << ", Mask: " << WiFi.subnetMask().toString() << ", DNS: " << WiFi.dnsIP().toString();
+    configTime(0, 0, "pool.ntp.org", "time.nist.gov");
 
+    wifiStatusChanged->fire(true);
+
+    logger << "STA Connected. STA SSID: " << WiFi.SSID()
+           << " STA IPv4: " << WiFi.localIP().toString()
+           << ", GW: " << WiFi.gatewayIP().toString()
+           << ", Mask: " << WiFi.subnetMask().toString()
+           << ", DNS: " << WiFi.dnsIP().toString();
 }
 
-// when wifi disconnects
+// Called when WiFi disconnects (does not trigger AP yet)
 void WifiNetwork::wifiOnDisconnect() {
-    logger << "Disconnected.";
-    wifi_connected = false;
-
-    // Emit an event about the Wifi status
-    wifiStatusChanged->fire(wifi_connected);
-
-    // Try agan till WIFI_MAX_TRY
-    this->tries++;
-    if (this->tries > WIFI_MAX_TRY) {
-        WiFi.disconnect();
-        logger << "Final disconnect.";
-        this -> createAP();
-    } else {
-        this -> connectToAP();
+    if (wifi_connected) {
+        logger << "WiFi disconnected";
     }
-    //this -> connectWifi();
+
+    wifi_connected = false;
+    wifiStatusChanged->fire(false);
 }
 
-// while wifi is connected
+// Loop when WiFi is connected
 void WifiNetwork::wifiConnectedLoop() {
+    // nothing for now
 }
 
-// while wifi is not connected
+// Loop when WiFi is disconnected
 void WifiNetwork::wifiDisconnectedLoop() {
-    // Try to reconnect time to time
-    if ((millis() - APstart) > WIFI_OFF_REBOOT_TIME) {
-        if (ssid.length() > 0) {
+
+    // ---- AP fallback active ----
+    if (apFallbackActive) {
+
+        // Reboot after timeout if SSID exists
+        if (ssid.length() > 0 && (millis() - APstart) > WIFI_OFF_REBOOT_TIME) {
+            logger << "AP timeout reached, rebooting";
             ESP.restart();
         }
+
+        dnsServer.processNextRequest();
+        return;
     }
+
+    // ---- Normal reconnect phase ----
+    if (ssid.length() > 0 && millis() - lastReconnectAttempt > WIFI_RECONNECT_INTERVAL) {
+
+        lastReconnectAttempt = millis();
+        tries++;
+
+        logger << "Reconnect attempt #" << String(tries);
+        WiFi.disconnect(false);
+        connectToAP();
+    }
+
+    // ---- Fallback to AP if max tries reached ----
+    if (tries > WIFI_MAX_TRY) {
+        logger << "WiFi unreachable, switching to AP mode";
+
+        apFallbackActive = true;
+        createAP();
+        APstart = millis();
+    }
+
+    dnsServer.processNextRequest();
 }
 
 void WifiNetwork::setupMDNS() {
@@ -172,11 +196,14 @@ void WifiNetwork::setupMDNS() {
 }
 
 void WifiNetwork::configAP() {
-    WiFi.softAP( "_" + WiFi.macAddress());
+    String apName = String(BOARD_NAME) + "_" + WiFi.macAddress();
+    apName.replace(":", "");
 
-    // For captive portal
-    dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-    dnsServer.start(53, "*", AP_IP);
+    logger << "AP name: " << apName;
 
     WiFi.softAPConfig(AP_IP, AP_IP, AP_NETMASK);
+    WiFi.softAP(apName.c_str(), NULL, 1, 0, 4, false);
+
+    dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+    dnsServer.start(53, "*", AP_IP);
 }

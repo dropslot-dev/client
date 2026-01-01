@@ -380,7 +380,7 @@ DropSlot
 <a class="button w100" href="/">home</a>
 <a class="button w100" href="/update">update</a>
 <!--<a class="button w100 button-danger" id="reset" href="#">reset</a>-->
-<div class="version" id="version">v1.1 - 13</div>
+<div class="version" id="version">v1.1 - 14</div>
 <div class="version" id="chip"></div>
 <div id="footer">
 <div><a href="https://dropslot.dev/" target="_blank">DropSlot</a></div>
@@ -1343,7 +1343,7 @@ DropSlot
 <a class="button w100" href="/">home</a>
 <a class="button w100" href="/update">update</a>
 <!--<a class="button w100 button-danger" id="reset" href="#">reset</a>-->
-<div class="version" id="version">v1.1 - 13</div>
+<div class="version" id="version">v1.1 - 14</div>
 <div id="footer">
 <div><a href="https://dropslot.dev/" target="_blank">DropSlot</a></div>
 </div>

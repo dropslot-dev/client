@@ -13,8 +13,7 @@ public:
 
 private:
     Logger logger;
-    Signal<boolean>* buttonState;
-    bool _buttonState;
+    Signal<boolean>* _buttonState;
     unsigned long _lastDebounceTime;
     bool _pressStatus;
     bool _lastReading;

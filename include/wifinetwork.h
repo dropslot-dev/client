@@ -24,6 +24,8 @@ class WifiNetwork {
 
         int tries;
         int APstart;
+        int lastReconnectAttempt;
+        bool apFallbackActive;
         String uniqueBoardname;
 
         WifiNetwork(Log& rlog);
@@ -35,6 +37,8 @@ class WifiNetwork {
         void createAP();
         void stopAP();
         boolean isConnected();
+
+        #define WIFI_RECONNECT_INTERVAL 5000  // 5 seconds
 
 
     private:

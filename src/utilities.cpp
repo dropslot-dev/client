@@ -26,10 +26,18 @@ const char* getChipModelString(esp_chip_model_t model) {
 
 String getTimestamp() {
     struct tm timeinfo;
-    if (!getLocalTime(&timeinfo)) {
-        return "[--:--:--]";
+    static char lastBuffer[12] = "[--:--:--]";
+    static bool hasValidTime = false;
+
+    // IMPORTANT: default getLocalTime() can block for ~5s if time isn't synced yet.
+    // Use a 0ms timeout so logging never stalls.
+    if (getLocalTime(&timeinfo, 0)) {
+        strftime(lastBuffer, sizeof(lastBuffer), "[%H:%M:%S]", &timeinfo);
+        hasValidTime = true;
     }
-    char buffer[12];
-    strftime(buffer, sizeof(buffer), "[%H:%M:%S]", &timeinfo);
-    return String(buffer);
+
+    if (hasValidTime) {
+        return String(lastBuffer);
+    }
+    return "[--:--:--]";
 }

@@ -29,12 +29,14 @@ void ButtonHandler::loop() {
         if (reading != _stableState) {
             _stableState = reading;
 
+            logger << "Button state changed to: " + String(_stableState == LOW ? "PRESSED" : "RELEASED");
+
             if (_stableState == LOW) {
                 // Pressed
-                buttonState->fire(true);
+                _buttonState->fire(true);
             } else {
                 // Released
-                buttonState->fire(false);
+                _buttonState->fire(false);
             }
         }
     }

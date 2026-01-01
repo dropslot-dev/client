@@ -1,34 +1,43 @@
 #include "button_handler.h"
 #include "config.h"
 
-ButtonHandler::ButtonHandler() 
-    : _lastState(HIGH), _lastDebounceTime(0), _buttonPressed(false) {
-}
+ButtonHandler::ButtonHandler(Log& rlog): logger(rlog, "[BUTTON]") {}
 
-void ButtonHandler::begin() {
+void ButtonHandler::setup(Signal<boolean>& buttonState) {
+    _buttonState = &buttonState;
+
+    _lastReading = HIGH;
+    _stableState = HIGH;
+    _lastDebounceTime = 0;
+
     pinMode(BUTTON_PIN, INPUT_PULLUP);
 }
 
-bool ButtonHandler::wasPressed() {
-    bool currentState = digitalRead(BUTTON_PIN);
+void ButtonHandler::loop() {
+    bool reading = digitalRead(BUTTON_PIN);
     unsigned long now = millis();
-    
-    if (currentState != _lastState) {
+
+    // reset the debounce timer on state change
+    if (reading != _lastReading) {
         _lastDebounceTime = now;
     }
-    
-    _lastState = currentState;
-    
-    bool pressed = false;
-    
+
+    _lastReading = reading;
+
     if ((now - _lastDebounceTime) > DEBOUNCE_DELAY_MS) {
-        if (currentState == LOW && !_buttonPressed) {
-            pressed = true;
-            _buttonPressed = true;
-        } else if (currentState == HIGH) {
-            _buttonPressed = false;
+
+        if (reading != _stableState) {
+            _stableState = reading;
+
+            logger << "Button state changed to: " + String(_stableState == LOW ? "PRESSED" : "RELEASED");
+
+            if (_stableState == LOW) {
+                // Pressed
+                _buttonState->fire(true);
+            } else {
+                // Released
+                _buttonState->fire(false);
+            }
         }
     }
-    
-    return pressed;
 }

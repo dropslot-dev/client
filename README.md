@@ -4,6 +4,9 @@ ESP32-based IoT device for meeting room status indication and control.
 
 ## Features
 
+- **HTML Administration Interface**: Web-based configuration through ESP32 access point
+- **WiFi Configuration**: Configure WiFi credentials through web interface (no code changes needed)
+- **Parameter Management**: Modify room settings, server URL, and other parameters via web UI
 - **WiFi Connectivity**: Connects to configured WiFi network
 - **Room Status Indication**: LED shows room availability
   - Solid Green: Room is free
@@ -59,38 +62,51 @@ Button:
 
 2. Clone this repository and open the `client/` directory
 
-3. Configure settings in `include/config.h`:
-   ```cpp
-   #define WIFI_SSID "your-wifi-network"
-   #define WIFI_PASSWORD "your-wifi-password"
-   #define SERVER_URL "http://your-server-ip:8080"
-   #define ROOM_ID "201"  // Your room ID
-   ```
-
-4. Build and upload:
+3. Build and upload the firmware:
    ```bash
    pio run --target upload
    ```
 
-5. Monitor serial output:
+4. **Initial Configuration via Access Point**:
+   - After first boot, the ESP32 creates a WiFi access point
+   - Connect to the ESP32's access point (network name includes MAC address)
+   - Open a web browser and navigate to the configuration page
+   - Enter your WiFi credentials, server URL, room ID, and other parameters
+   - Save the configuration - the device will reboot and connect to your WiFi
+
+5. **Ongoing Configuration**:
+   - Once connected to your WiFi network, access the administration page using the device's IP address
+   - All parameters can be modified through the web interface without code changes
+
+6. Monitor serial output for debugging:
    ```bash
    pio device monitor
    ```
 
-## Configuration Options
+## Configuration
 
-Edit `include/config.h` to customize:
+### Web-Based Configuration
 
-- **WIFI_SSID**: WiFi network name
-- **WIFI_PASSWORD**: WiFi password
-- **SERVER_URL**: Backend API server URL
-- **ROOM_ID**: Unique room identifier
-- **POLL_INTERVAL_MS**: Status polling interval (default: 5000ms)
-- **AUTH_ENABLED**: Enable/disable SHA256 authentication (default: true)
-- **Pin assignments**: LED and button GPIO pins
+All configuration is now done through the HTML administration interface:
+
+1. **Initial Setup**: Connect to ESP32's access point and configure basic settings
+2. **Ongoing Management**: Access the web interface using the device's IP address
+3. **Available Settings**:
+   - WiFi SSID and Password
+   - Server URL and Room ID
+   - Polling interval
+   - Authentication settings
+
+### Legacy Configuration (config.h)
+
+Some settings remain in `include/config.h` for advanced users:
+
+- **Pin assignments**: LED and button GPIO pins (hardware-specific, requires recompilation)
 - **PWM settings**: LED brightness and frequency
-- **DEBOUNCE_DELAY_MS**: Button debounce time (default: 50ms)
-- **HTTP_TIMEOUT_MS**: API request timeout (default: 10000ms)
+- **DEBOUNCE_DELAY**: Button debounce time
+- **HTTP_TIMEOUT**: API request timeout
+- **Board identification**: Hardware-specific constants
+- **Other operational parameters**: Various timing and behavior constants
 
 ## API Integration
 
@@ -115,17 +131,24 @@ Authorization: Bearer <SHA256(ROOM_ID)>
 
 ```
 client/
+├── html/
+│   ├── index.html           # Main configuration page
+│   ├── update.html          # Firmware update page
+│   ├── functions.js         # Web interface JavaScript
+│   └── style.css            # Web interface styling
 ├── include/
 │   ├── api_client.h         # HTTP API client
 │   ├── auth_util.h          # SHA256 authentication
 │   ├── button_handler.h     # Button debouncing
-│   ├── config.h             # Configuration constants
-│   └── led_controller.h     # LED pattern control
+│   ├── config.h             # Hardware configuration constants
+│   ├── led_controller.h     # LED pattern control
+│   └── wifinetwork.h        # WiFi and web server management
 ├── src/
 │   ├── api_client.cpp
 │   ├── auth_util.cpp
 │   ├── button_handler.cpp
 │   ├── led_controller.cpp
+│   ├── wifinetwork.cpp      # WiFi and access point management
 │   └── main.cpp             # Application entry point
 ├── platformio.ini           # PlatformIO configuration
 └── README.md
@@ -133,15 +156,28 @@ client/
 
 ## Troubleshooting
 
-### WiFi Connection Issues
-- Verify SSID and password in `config.h`
-- Check that WiFi network is 2.4GHz (ESP32 doesn't support 5GHz)
-- Monitor serial output for connection status
+### Initial Setup Issues
+- If you can't find the ESP32's access point, check serial monitor for the network name
+- The access point name includes the device's MAC address for uniqueness
+- Ensure you're connecting to the correct access point
+
+### WiFi Configuration Issues
+- Use the web interface to update WiFi credentials instead of modifying code
+- If WiFi connection fails, the device will create an access point for reconfiguration
+- Check serial monitor for connection status and error messages
+- Verify WiFi network is 2.4GHz (ESP32 doesn't support 5GHz)
+
+### Web Interface Access
+- After WiFi configuration, find the device's IP address in your router or serial monitor
+- Access the administration page at `http://[device-ip]/`
+- If the page doesn't load, check network connectivity and firewall settings
 
 ### API Communication Errors
-- Verify `SERVER_URL` is correct and server is running
+- Use the web interface to verify and update the server URL
 - Check that ESP32 and server are on same network (or server is publicly accessible)
-- Verify `ROOM_ID` exists on server
+- Verify room ID through the web configuration page
+- Check server connectivity from the device's network
+- Monitor serial output for detailed error messages
 - If using authentication, ensure room ID hash matches server expectations
 
 ### LED Not Working
@@ -175,11 +211,3 @@ pio device monitor --baud 115200
 ```bash
 pio run --target clean
 ```
-
-## License
-
-[Add your license here]
-
-## Contributing
-
-[Add contribution guidelines here]
